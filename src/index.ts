@@ -16,11 +16,26 @@ function getJwtSecret(): string {
 
 const JWT_SECRET: string = getJwtSecret();
 
+const BCRYPT_ROUNDS = 12;
+
+/**
+ * Token purposes. Every token carries a `typ` claim and verification is
+ * purpose-scoped, so a short-lived reset or MFA-challenge token can never be
+ * replayed as a full session token.
+ */
+export const TOKEN_TYPE = {
+  SESSION: 'session',
+  PASSWORD_RESET: 'password-reset',
+  MFA_CHALLENGE: 'mfa-challenge',
+} as const;
+
+export type TokenType = (typeof TOKEN_TYPE)[keyof typeof TOKEN_TYPE];
+
 /**
  * Hashes a plaintext password using bcrypt.
  */
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 /**
@@ -31,13 +46,35 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
- * Signs a JWT payload.
+ * Signs a JWT payload. Callers should prefer the purpose-scoped helpers below;
+ * this remains for payloads that already carry their own `typ`.
  */
 export function signToken(
   payload: string | object | Buffer,
   expiresIn: jwt.SignOptions['expiresIn'] = '1d',
 ): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });
+}
+
+/**
+ * Signs a token stamped with an explicit purpose.
+ */
+export function signTypedToken(
+  type: TokenType,
+  payload: Record<string, unknown>,
+  expiresIn: jwt.SignOptions['expiresIn'],
+): string {
+  return jwt.sign({ ...payload, typ: type }, JWT_SECRET, { expiresIn });
+}
+
+/**
+ * Signs a full session token.
+ */
+export function signSessionToken(
+  payload: Record<string, unknown>,
+  expiresIn: jwt.SignOptions['expiresIn'] = '1d',
+): string {
+  return signTypedToken(TOKEN_TYPE.SESSION, payload, expiresIn);
 }
 
 /**
@@ -49,6 +86,23 @@ export function verifyToken(token: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * Verifies a token AND that it was issued for the given purpose. Returns null
+ * on a bad signature, expiry, or a `typ` mismatch.
+ *
+ * Tokens minted before the `typ` claim existed are rejected rather than assumed
+ * to be sessions — they expire within a day of deploy.
+ */
+export function verifyTypedToken<T = Record<string, unknown>>(
+  token: string,
+  type: TokenType,
+): T | null {
+  const payload = verifyToken(token);
+  if (!payload || typeof payload !== 'object') return null;
+  if ((payload as { typ?: unknown }).typ !== type) return null;
+  return payload as T;
 }
 
 export { hasPermission, parsePermission } from '@unerp/shared';
