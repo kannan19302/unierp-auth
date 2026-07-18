@@ -3,13 +3,15 @@
 // ─────────────────────────────────────────────────
 // This package provides authentication utilities and RBAC helpers.
 
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 function getJwtSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
-    throw new Error('NEXTAUTH_SECRET environment variable is required — never run with a default secret.');
+    throw new Error(
+      "NEXTAUTH_SECRET environment variable is required — never run with a default secret.",
+    );
   }
   return secret;
 }
@@ -24,9 +26,11 @@ const BCRYPT_ROUNDS = 12;
  * replayed as a full session token.
  */
 export const TOKEN_TYPE = {
-  SESSION: 'session',
-  PASSWORD_RESET: 'password-reset',
-  MFA_CHALLENGE: 'mfa-challenge',
+  SESSION: "session",
+  PASSWORD_RESET: "password-reset",
+  MFA_CHALLENGE: "mfa-challenge",
+  /** CSRF/state carrier for the OAuth authorization-code round-trip. */
+  OAUTH_STATE: "oauth-state",
 } as const;
 
 export type TokenType = (typeof TOKEN_TYPE)[keyof typeof TOKEN_TYPE];
@@ -41,7 +45,10 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Compares a plaintext password against a bcrypt hash.
  */
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
+export async function comparePassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 
@@ -51,7 +58,7 @@ export async function comparePassword(password: string, hash: string): Promise<b
  */
 export function signToken(
   payload: string | object | Buffer,
-  expiresIn: jwt.SignOptions['expiresIn'] = '1d',
+  expiresIn: jwt.SignOptions["expiresIn"] = "1d",
 ): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
@@ -62,7 +69,7 @@ export function signToken(
 export function signTypedToken(
   type: TokenType,
   payload: Record<string, unknown>,
-  expiresIn: jwt.SignOptions['expiresIn'],
+  expiresIn: jwt.SignOptions["expiresIn"],
 ): string {
   return jwt.sign({ ...payload, typ: type }, JWT_SECRET, { expiresIn });
 }
@@ -72,7 +79,7 @@ export function signTypedToken(
  */
 export function signSessionToken(
   payload: Record<string, unknown>,
-  expiresIn: jwt.SignOptions['expiresIn'] = '1d',
+  expiresIn: jwt.SignOptions["expiresIn"] = "1d",
 ): string {
   return signTypedToken(TOKEN_TYPE.SESSION, payload, expiresIn);
 }
@@ -100,12 +107,12 @@ export function verifyTypedToken<T = Record<string, unknown>>(
   type: TokenType,
 ): T | null {
   const payload = verifyToken(token);
-  if (!payload || typeof payload !== 'object') return null;
+  if (!payload || typeof payload !== "object") return null;
   if ((payload as { typ?: unknown }).typ !== type) return null;
   return payload as T;
 }
 
-export { hasPermission, parsePermission } from '@unerp/shared';
+export { hasPermission, parsePermission } from "@unerp/shared";
 
 /**
  * System-level permission definitions.
@@ -113,44 +120,44 @@ export { hasPermission, parsePermission } from '@unerp/shared';
  */
 export const SYSTEM_PERMISSIONS = {
   admin: {
-    user: ['create', 'read', 'update', 'delete'],
-    role: ['create', 'read', 'update', 'delete'],
-    tenant: ['read', 'update'],
-    setting: ['read', 'update'],
+    user: ["create", "read", "update", "delete"],
+    role: ["create", "read", "update", "delete"],
+    tenant: ["read", "update"],
+    setting: ["read", "update"],
   },
   finance: {
-    invoice: ['create', 'read', 'update', 'delete', 'send', 'void'],
-    payment: ['create', 'read', 'update', 'delete'],
-    account: ['create', 'read', 'update', 'delete'],
-    report: ['read', 'export'],
+    invoice: ["create", "read", "update", "delete", "send", "void"],
+    payment: ["create", "read", "update", "delete"],
+    account: ["create", "read", "update", "delete"],
+    report: ["read", "export"],
   },
   hr: {
-    employee: ['create', 'read', 'update', 'delete'],
-    department: ['create', 'read', 'update', 'delete'],
-    payroll: ['read', 'create', 'approve'],
-    leave: ['create', 'read', 'approve'],
-    attendance: ['read', 'create', 'update'],
+    employee: ["create", "read", "update", "delete"],
+    department: ["create", "read", "update", "delete"],
+    payroll: ["read", "create", "approve"],
+    leave: ["create", "read", "approve"],
+    attendance: ["read", "create", "update"],
   },
   crm: {
-    contact: ['create', 'read', 'update', 'delete'],
-    lead: ['create', 'read', 'update', 'delete', 'convert'],
-    opportunity: ['create', 'read', 'update', 'delete'],
-    activity: ['create', 'read', 'update', 'delete'],
+    contact: ["create", "read", "update", "delete"],
+    lead: ["create", "read", "update", "delete", "convert"],
+    opportunity: ["create", "read", "update", "delete"],
+    activity: ["create", "read", "update", "delete"],
   },
   inventory: {
-    product: ['create', 'read', 'update', 'delete'],
-    warehouse: ['create', 'read', 'update', 'delete'],
-    stock: ['read', 'adjust', 'transfer'],
+    product: ["create", "read", "update", "delete"],
+    warehouse: ["create", "read", "update", "delete"],
+    stock: ["read", "adjust", "transfer"],
   },
   procurement: {
-    vendor: ['create', 'read', 'update', 'delete'],
-    'purchase-order': ['create', 'read', 'update', 'delete', 'approve'],
-    rfq: ['create', 'read', 'update', 'delete'],
+    vendor: ["create", "read", "update", "delete"],
+    "purchase-order": ["create", "read", "update", "delete", "approve"],
+    rfq: ["create", "read", "update", "delete"],
   },
   sales: {
-    quotation: ['create', 'read', 'update', 'delete', 'send'],
-    'sales-order': ['create', 'read', 'update', 'delete', 'confirm'],
-    return: ['create', 'read', 'update', 'approve'],
+    quotation: ["create", "read", "update", "delete", "send"],
+    "sales-order": ["create", "read", "update", "delete", "confirm"],
+    return: ["create", "read", "update", "approve"],
   },
 } as const;
 
@@ -159,50 +166,50 @@ export const SYSTEM_PERMISSIONS = {
  */
 export const DEFAULT_ROLES = {
   SUPER_ADMIN: {
-    name: 'Super Admin',
-    description: 'Full access to all features',
-    permissions: ['*'],
+    name: "Super Admin",
+    description: "Full access to all features",
+    permissions: ["*"],
     isSystem: true,
   },
   ADMIN: {
-    name: 'Admin',
-    description: 'Administrative access with user management',
-    permissions: ['admin.*', 'finance.*', 'hr.*', 'crm.*', 'inventory.*'],
+    name: "Admin",
+    description: "Administrative access with user management",
+    permissions: ["admin.*", "finance.*", "hr.*", "crm.*", "inventory.*"],
     isSystem: true,
   },
   FINANCE_MANAGER: {
-    name: 'Finance Manager',
-    description: 'Full access to finance module',
-    permissions: ['finance.*', 'sales.sales-order.read'],
+    name: "Finance Manager",
+    description: "Full access to finance module",
+    permissions: ["finance.*", "sales.sales-order.read"],
     isSystem: true,
   },
   HR_MANAGER: {
-    name: 'HR Manager',
-    description: 'Full access to HR module',
-    permissions: ['hr.*'],
+    name: "HR Manager",
+    description: "Full access to HR module",
+    permissions: ["hr.*"],
     isSystem: true,
   },
   SALES_REP: {
-    name: 'Sales Representative',
-    description: 'Access to CRM and sales features',
+    name: "Sales Representative",
+    description: "Access to CRM and sales features",
     permissions: [
-      'crm.*',
-      'sales.quotation.*',
-      'sales.sales-order.create',
-      'sales.sales-order.read',
-      'inventory.product.read',
+      "crm.*",
+      "sales.quotation.*",
+      "sales.sales-order.create",
+      "sales.sales-order.read",
+      "inventory.product.read",
     ],
     isSystem: true,
   },
   VIEWER: {
-    name: 'Viewer',
-    description: 'Read-only access to all modules',
+    name: "Viewer",
+    description: "Read-only access to all modules",
     permissions: [
-      'finance.invoice.read',
-      'finance.report.read',
-      'hr.employee.read',
-      'crm.contact.read',
-      'inventory.product.read',
+      "finance.invoice.read",
+      "finance.report.read",
+      "hr.employee.read",
+      "crm.contact.read",
+      "inventory.product.read",
     ],
     isSystem: true,
   },
