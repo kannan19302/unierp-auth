@@ -1,23 +1,27 @@
 # unierp-auth
 
-**Layer L1** of the UniERP layered repository architecture
-(`PLATFORM_ARCHITECTURE.md` § 4.2).
+**Layer L1 — Foundation** of the [UniERP](../unierp-platform) platform.
+Depends on: L0, L1.
 
-## Why it is its own repository
+## What this is
 
-Session, token and permission-matching primitives. Its `hasPermission` is what refuses to let a tenant grant satisfy a control-plane permission (§ 1.2).
+Session, token and permission-matching primitives.
 
-## The invariant
+## The invariant this repository owns
 
-A repository may depend only on published artifacts of a strictly lower layer.
-Never sideways within a layer. Never upward.
+Authentication is not authorisation. A route that proves who you are still has to prove what you may do.
 
-## Extraction status
+## The rule that applies everywhere
 
-Extracted from the `ERPSys` monorepo as § 14 Phase 3, with history preserved
-via `git-filter-repo`, and packaged so it is genuinely installable: an explicit
-`files` allowlist (npm otherwise falls back to `.gitignore` and omits `dist/`),
-no `workspace:` specifiers, and a local tsconfig base so it typechecks
-standalone.
+A repository may depend only on published artifacts of a **strictly lower
+layer** — never sideways within a layer, never upward. A cycle is not
+discouraged; it is unrepresentable, because the lower layer's package cannot
+name the higher one.
 
-The monorepo copy remains authoritative until consumers switch.
+See the [platform overview](../unierp-platform/README.md) for the full map, and
+[`PLATFORM_ARCHITECTURE.md`](../ERPSys/docs/PLATFORM_ARCHITECTURE.md) § 4.2 for
+the reasoning.
+
+## Licence
+
+AGPL-3.0.
