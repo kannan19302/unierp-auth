@@ -1,6 +1,6 @@
 {
   "name": "@unerp/auth",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Authentication providers, RBAC guards, and session management",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,15 +18,15 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@unerp/shared": "^1.0.0",
-    "@unerp/database": "^1.0.10",
+    "@unerp/shared": "^1.0.5",
+    "@unerp/database": "^1.0.11",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.8",
-    "@unerp/config": "^1.0.1",
+    "@unerp/config": "^1.0.2",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0",
     "rimraf": "^6.0.0",
