@@ -12,14 +12,14 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npx tsc -p tsconfig.build.json",
     "lint": "eslint src/",
     "test": "vitest run",
     "clean": "rimraf dist"
   },
   "dependencies": {
     "@unerp/shared": "^1.0.0",
-    "@unerp/database": "^1.0.1",
+    "@unerp/database": "^1.0.10",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2"
   },
@@ -29,7 +29,8 @@
     "@unerp/config": "^1.0.1",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0",
-    "rimraf": "^6.0.0"
+    "rimraf": "^6.0.0",
+    "@types/node": "^22.0.0"
   },
   "files": [
     "dist",
