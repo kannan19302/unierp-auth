@@ -1,5 +1,5 @@
 {
-  "extends": "@unerp/config/typescript/base.json",
+  "extends": "@kannan19302/config/typescript/base.json",
   "compilerOptions": {
     "outDir": "./dist"
   },

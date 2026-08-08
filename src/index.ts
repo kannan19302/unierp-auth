@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────
-// @unerp/auth — Authentication & RBAC
+// @kannan19302/auth — Authentication & RBAC
 // ─────────────────────────────────────────────────
 // This package provides authentication utilities and RBAC helpers.
 
@@ -112,7 +112,7 @@ export function verifyTypedToken<T = Record<string, unknown>>(
   return payload as T;
 }
 
-export { hasPermission, parsePermission } from "@unerp/shared";
+export { hasPermission, parsePermission } from "@kannan19302/shared";
 
 /**
  * System-level permission definitions.
