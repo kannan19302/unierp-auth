@@ -74,11 +74,20 @@ export function signTypedToken(
   return jwt.sign({ ...payload, typ: type }, JWT_SECRET, { expiresIn });
 }
 
+export interface SessionTokenPayload extends Record<string, unknown> {
+  sid: string;
+  userId: string;
+  tenantId: string | null;
+  realm?: "tenant" | "provider";
+  amr?: string[];
+  mfaVerified?: boolean;
+}
+
 /**
  * Signs a full session token.
  */
 export function signSessionToken(
-  payload: Record<string, unknown>,
+  payload: SessionTokenPayload,
   expiresIn: jwt.SignOptions["expiresIn"] = "1d",
 ): string {
   return signTypedToken(TOKEN_TYPE.SESSION, payload, expiresIn);
