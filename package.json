@@ -18,19 +18,20 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@kannan19302/shared": "^1.0.5",
     "@kannan19302/database": "^1.0.11",
+    "@kannan19302/shared": "^1.0.5",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@kannan19302/config": "^1.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.8",
-    "@kannan19302/config": "^1.0.2",
-    "typescript": "^5.7.0",
-    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "rimraf": "^6.0.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
   },
   "files": [
     "dist",
