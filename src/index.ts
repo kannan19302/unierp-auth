@@ -217,3 +217,6 @@ export const DEFAULT_ROLES = {
     isSystem: true,
   },
 } as const;
+
+// test violation
+console.log(" unstructured logging violation);
