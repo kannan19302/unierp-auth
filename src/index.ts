@@ -6,11 +6,23 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+/**
+ * Resolves the signing secret. Fails closed: there is no fallback value.
+ *
+ * A checked-in default secret is the same as no secret at all — anyone with
+ * the source can mint a token that every service accepts. Resolution is lazy
+ * so that importing this package (for its RBAC constants, say) does not
+ * require a signing secret; only signing and verifying do.
+ */
 function getJwtSecret(): string {
-  return process.env.NEXTAUTH_SECRET || "your-super-secret-key-change-in-production";
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error(
+      "NEXTAUTH_SECRET is not set. Refusing to sign or verify tokens without a configured secret.",
+    );
+  }
+  return secret;
 }
-
-const JWT_SECRET: string = getJwtSecret();
 
 const BCRYPT_ROUNDS = 12;
 
@@ -54,7 +66,7 @@ export function signToken(
   payload: string | object | Buffer,
   expiresIn: jwt.SignOptions["expiresIn"] = "1d",
 ): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn });
 }
 
 /**
@@ -65,7 +77,7 @@ export function signTypedToken(
   payload: Record<string, unknown>,
   expiresIn: jwt.SignOptions["expiresIn"],
 ): string {
-  return jwt.sign({ ...payload, typ: type }, JWT_SECRET, { expiresIn });
+  return jwt.sign({ ...payload, typ: type }, getJwtSecret(), { expiresIn });
 }
 
 export interface SessionTokenPayload extends Record<string, unknown> {
@@ -92,7 +104,7 @@ export function signSessionToken(
  */
 export function verifyToken(token: string): unknown {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, getJwtSecret());
   } catch {
     return null;
   }
@@ -218,5 +230,3 @@ export const DEFAULT_ROLES = {
   },
 } as const;
 
-// test violation
-console.log(" unstructured logging violation);
