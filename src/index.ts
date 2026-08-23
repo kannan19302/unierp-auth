@@ -4,7 +4,9 @@
 // This package provides authentication utilities and RBAC helpers.
 
 import bcrypt from "bcryptjs";
+import * as argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import { createHash } from "node:crypto";
 
 /**
  * Resolves the signing secret. Fails closed: there is no fallback value.
@@ -42,20 +44,122 @@ export const TOKEN_TYPE = {
 export type TokenType = (typeof TOKEN_TYPE)[keyof typeof TOKEN_TYPE];
 
 /**
- * Hashes a plaintext password using bcrypt.
+ * Hashes a plaintext password using Argon2id.
+ *
+ * Argon2id is the OWASP-recommended password hashing algorithm (2024+).
+ * It is resistant to both side-channel (Argon2i) and GPU/ASIC (Argon2d)
+ * attacks. The parameters below follow the OWASP minimum recommendations:
+ * - memoryCost: 19456 KiB (~19 MB)
+ * - timeCost: 2 iterations
+ * - parallelism: 1
  */
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, BCRYPT_ROUNDS);
+  return argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+  });
 }
 
 /**
- * Compares a plaintext password against a bcrypt hash.
+ * Whether a hash is a legacy bcrypt hash (starts with $2a$, $2b$, or $2y$).
+ */
+function isBcryptHash(hash: string): boolean {
+  return hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$");
+}
+
+export interface PasswordVerifyResult {
+  valid: boolean;
+  /**
+   * True if the hash is a legacy bcrypt hash that should be upgraded to
+   * Argon2id. The caller is responsible for calling `hashPassword()` with
+   * the plaintext and persisting the new hash. This enables transparent
+   * read-time migration without a flag day.
+   */
+  needsRehash: boolean;
+}
+
+/**
+ * Compares a plaintext password against a hash (Argon2id or legacy bcrypt).
+ *
+ * Transparent migration path:
+ * - If the stored hash is Argon2id, verify directly.
+ * - If the stored hash is bcrypt, verify with bcrypt and signal that a
+ *   rehash to Argon2id is needed.
+ *
+ * Callers that don't need the migration signal can use the `valid` field only.
  */
 export async function comparePassword(
   password: string,
   hash: string,
 ): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  const result = await comparePasswordWithRehash(password, hash);
+  return result.valid;
+}
+
+/**
+ * Like comparePassword but returns the full result including rehash signal.
+ * Used by the auth service's login path to trigger read-time hash upgrades.
+ */
+export async function comparePasswordWithRehash(
+  password: string,
+  hash: string,
+): Promise<PasswordVerifyResult> {
+  if (isBcryptHash(hash)) {
+    const valid = await bcrypt.compare(password, hash);
+    return { valid, needsRehash: valid };
+  }
+  // Argon2id hash — also check if parameters have changed
+  const valid = await argon2.verify(hash, password);
+  const needsRehash = valid ? argon2.needsRehash(hash, {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+  }) : false;
+  return { valid, needsRehash };
+}
+
+/**
+ * Checks a password against the HaveIBeenPwned Passwords API using
+ * k-anonymity — only the first 5 hex chars of the SHA-1 are sent, so
+ * the full password hash is never transmitted.
+ *
+ * Returns the breach count (0 = safe, >0 = compromised).
+ * Returns -1 if the API is unreachable (fail open — do not block login).
+ */
+export async function checkPasswordBreach(
+  password: string,
+): Promise<number> {
+  try {
+    const sha1 = createHash("sha1").update(password).digest("hex").toUpperCase();
+    const prefix = sha1.substring(0, 5);
+    const suffix = sha1.substring(5);
+
+    const response = await fetch(
+      `https://api.pwnedpasswords.com/range/${prefix}`,
+      {
+        headers: { "Add-Padding": "true" },
+        signal: AbortSignal.timeout(3000),
+      },
+    );
+
+    if (!response.ok) return -1;
+
+    const text = await response.text();
+    const lines = text.split("\n");
+    for (const line of lines) {
+      const [hashSuffix, count] = line.trim().split(":");
+      if (hashSuffix === suffix) {
+        return parseInt(count || "0", 10);
+      }
+    }
+    return 0;
+  } catch {
+    // Network failure — fail open so a HIBP outage doesn't block all logins.
+    return -1;
+  }
 }
 
 /**

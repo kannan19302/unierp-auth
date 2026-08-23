@@ -20,6 +20,7 @@
   "dependencies": {
     "@kannan19302/database": "^1.0.11",
     "@kannan19302/shared": "^1.0.5",
+    "argon2": "^0.41.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2"
   },
