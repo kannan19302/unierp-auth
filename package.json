@@ -2,7 +2,7 @@
   "name": "@kannan19302/auth",
   "version": "1.0.4",
   "description": "Authentication providers, RBAC guards, and session management",
-  "type": "module",
+  "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

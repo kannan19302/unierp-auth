@@ -26,8 +26,6 @@ function getJwtSecret(): string {
   return secret;
 }
 
-const BCRYPT_ROUNDS = 12;
-
 /**
  * Token purposes. Every token carries a `typ` claim and verification is
  * purpose-scoped, so a short-lived reset or MFA-challenge token can never be
@@ -113,7 +111,6 @@ export async function comparePasswordWithRehash(
   // Argon2id hash — also check if parameters have changed
   const valid = await argon2.verify(hash, password);
   const needsRehash = valid ? argon2.needsRehash(hash, {
-    type: argon2.argon2id,
     memoryCost: 19456,
     timeCost: 2,
     parallelism: 1,
@@ -333,4 +330,3 @@ export const DEFAULT_ROLES = {
     isSystem: true,
   },
 } as const;
-

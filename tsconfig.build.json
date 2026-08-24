@@ -1,5 +1,5 @@
 {
-  "extends": "@kannan19302/config/typescript/base.json",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist"
   },
