@@ -12,8 +12,8 @@ importers:
         specifier: ^1.0.11
         version: 1.0.14(magicast@0.3.5)(typescript@5.9.3)
       '@kannan19302/shared':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: file:../shared
+        version: file:../shared
       argon2:
         specifier: ^0.41.1
         version: 0.41.1
@@ -237,11 +237,19 @@ packages:
   '@kannan19302/config@1.0.2':
     resolution: {integrity: sha512-mJIQyBTKUduysyrQ1F5KB5+Fd2rjetHllQRDvKEFM3TvSm/7oG0cBsZH4M0Bwa5ifuqWkzJbjotZmYHhfUPeTQ==}
 
+  '@kannan19302/contracts@file:../unierp-contracts':
+    resolution: {directory: ../unierp-contracts, type: directory}
+
   '@kannan19302/database@1.0.14':
     resolution: {integrity: sha512-S/bAFo+AH0RXKr1eAcGVHng2JEQ+FOq7sVa5Wigd/Bm5U33EfvAaUgdYc6PgGMM0gBSO+H2ZcrsQnl6QoXriWQ==}
 
-  '@kannan19302/shared@1.0.5':
-    resolution: {integrity: sha512-fR9L6yCFnznsQGfEUmHUNZfKX6FS4vu120JVp7KCQ0EyYnaussxM918IA2x4HC1J0EOOORZHK2PwgbKH65607w==}
+  '@kannan19302/shared@file:../shared':
+    resolution: {directory: ../shared, type: directory}
+    peerDependencies:
+      react: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -560,6 +568,14 @@ packages:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
+  date-fns-tz@3.2.0:
+    resolution: {integrity: sha512-sg8HqoTEulcbbbVXeg84u5UnlsQa8GS5QXMqjjYIhS4abEVVKIUwe0/l/UhrZdKaL/W5eWZNlbTeEIiOXTcsBQ==}
+    peerDependencies:
+      date-fns: ^3.0.0 || ^4.0.0
+
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
+
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
     engines: {node: '>=6.0'}
@@ -686,6 +702,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jose@5.10.0:
+    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
   jsonwebtoken@9.0.3:
     resolution: {integrity: sha512-MT/xP0CrubFRNLNKvxJ2BYfy53Zkm++5bX9dtuPbqAeQpTVe0MQTFhao8+Cp//EmJp244xt6Drw/GVEGCUj40g==}
@@ -1132,6 +1151,8 @@ snapshots:
 
   '@kannan19302/config@1.0.2': {}
 
+  '@kannan19302/contracts@file:../unierp-contracts': {}
+
   '@kannan19302/database@1.0.14(magicast@0.3.5)(typescript@5.9.3)':
     dependencies:
       '@prisma/client': 6.19.3(prisma@6.19.3(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
@@ -1141,8 +1162,12 @@ snapshots:
       - magicast
       - typescript
 
-  '@kannan19302/shared@1.0.5':
+  '@kannan19302/shared@file:../shared':
     dependencies:
+      '@kannan19302/contracts': file:../unierp-contracts
+      date-fns: 4.4.0
+      date-fns-tz: 3.2.0(date-fns@4.4.0)
+      jose: 5.10.0
       zod: 3.25.76
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
@@ -1427,6 +1452,12 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
+  date-fns-tz@3.2.0(date-fns@4.4.0):
+    dependencies:
+      date-fns: 4.4.0
+
+  date-fns@4.4.0: {}
+
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
@@ -1566,6 +1597,8 @@ snapshots:
       '@pkgjs/parseargs': 0.11.0
 
   jiti@2.7.0: {}
+
+  jose@5.10.0: {}
 
   jsonwebtoken@9.0.3:
     dependencies:
