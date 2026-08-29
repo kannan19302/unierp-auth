@@ -229,6 +229,22 @@ export function verifyTypedToken<T = Record<string, unknown>>(
 }
 
 export { hasPermission, parsePermission } from "@kannan19302/shared";
+export {
+  decryptConfigurationSecret,
+  encryptConfigurationSecret,
+  isEncryptedConfigurationSecret,
+} from "./configuration-secret.js";
+export {
+  OIDC_ALLOWED_SIGNING_ALGORITHMS,
+  discoverOidcConfiguration,
+  requirePublicHttpsUrl,
+  testOidcConnection,
+} from "./oidc-discovery.js";
+export type {
+  FederationFetch,
+  OidcConnectionEvidence,
+  OidcDiscoveryDocument,
+} from "./oidc-discovery.js";
 
 /**
  * System-level permission definitions.
