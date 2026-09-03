@@ -1,4 +1,6 @@
 import { isIP } from "node:net";
+import dns from "node:dns/promises";
+import * as crypto from "node:crypto";
 
 export const OIDC_ALLOWED_SIGNING_ALGORITHMS = [
   "RS256", "RS384", "RS512",
@@ -52,7 +54,7 @@ export function requirePublicHttpsUrl(value: string | null | undefined, label: s
   return url;
 }
 
-function isNonPublicIp(host: string): boolean {
+export function isNonPublicIp(host: string): boolean {
   const version = isIP(host);
   if (version === 4) {
     const [a = 0, b = 0] = host.split(".").map(Number);
@@ -164,3 +166,83 @@ export async function testOidcConnection(
     signingKeyCount: signingKeys.length,
   };
 }
+
+export interface SamlConnectionEvidence {
+  entryPoint: string;
+  issuer: string | null;
+  certificateSubject: string;
+  certificateIssuer: string;
+  certificateValidFrom: string;
+  certificateValidTo: string;
+  fingerprint256: string;
+  keyAlgorithm: string;
+}
+
+export function testSamlConfiguration(config: {
+  samlEntryPoint: string | null | undefined;
+  samlCert: string | null | undefined;
+  samlIssuer?: string | null;
+}): SamlConnectionEvidence {
+  const entryPoint = requirePublicHttpsUrl(config.samlEntryPoint, "SAML entry point");
+  if (!config.samlCert || typeof config.samlCert !== "string" || config.samlCert.trim().length === 0) {
+    throw new Error("SAML IdP certificate is required.");
+  }
+  let certStr = config.samlCert.trim();
+  if (!certStr.includes("-----BEGIN CERTIFICATE-----")) {
+    certStr = `-----BEGIN CERTIFICATE-----\n${certStr}\n-----END CERTIFICATE-----`;
+  }
+  let cert: crypto.X509Certificate;
+  try {
+    cert = new crypto.X509Certificate(certStr);
+  } catch (e: any) {
+    throw new Error(`SAML IdP certificate is invalid PEM: ${e?.message ?? e}`);
+  }
+
+  const now = Date.now();
+  const validTo = new Date(cert.validTo).getTime();
+  const validFrom = new Date(cert.validFrom).getTime();
+  if (now > validTo) {
+    throw new Error(`SAML IdP certificate expired on ${cert.validTo}.`);
+  }
+  if (now < validFrom - 60_000) {
+    throw new Error(`SAML IdP certificate is not valid until ${cert.validFrom}.`);
+  }
+
+  return {
+    entryPoint: entryPoint.toString(),
+    issuer: config.samlIssuer || null,
+    certificateSubject: cert.subject,
+    certificateIssuer: cert.issuer,
+    certificateValidFrom: cert.validFrom,
+    certificateValidTo: cert.validTo,
+    fingerprint256: cert.fingerprint256,
+    keyAlgorithm: cert.publicKey.asymmetricKeyType || "unknown",
+  };
+}
+
+export async function assertSafePublicHostname(
+  hostname: string,
+  dnsLookup?: (host: string, options: { all: boolean }) => Promise<Array<{ address: string; family: number }>>,
+): Promise<void> {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (isNonPublicIp(host)) {
+    throw new Error(`Host ${host} is a private or non-public IP address.`);
+  }
+  if (isIP(host) === 0) {
+    try {
+      const lookupFn = dnsLookup ?? (async (h, o) => {
+        const res = await dns.lookup(h, o);
+        return Array.isArray(res) ? res : [res];
+      });
+      const addresses = await lookupFn(host, { all: true });
+      for (const addr of addresses) {
+        if (isNonPublicIp(addr.address)) {
+          throw new Error(`Hostname ${host} resolves to private/restricted IP ${addr.address}.`);
+        }
+      }
+    } catch (err: any) {
+      if (err?.message?.includes("resolves to private/restricted")) throw err;
+    }
+  }
+}
+

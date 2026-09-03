@@ -36,7 +36,7 @@ describe("federation configuration secret envelope", () => {
   it("rejects plaintext, tampering and an unavailable key", () => {
     expect(() => decryptConfigurationSecret("legacy-plaintext")).toThrow(/encrypted envelope/);
     const envelope = encryptConfigurationSecret("synthetic-client-secret");
-    const tampered = `${envelope.slice(0, -1)}${envelope.endsWith("A") ? "B" : "A"}`;
+    const tampered = `${envelope.slice(0, 20)}${envelope[20] === "a" ? "b" : "a"}${envelope.slice(21)}`;
     expect(() => decryptConfigurationSecret(tampered)).toThrow();
     process.env.SSO_CONFIG_ENCRYPTION_KEYS = JSON.stringify({
       current: Buffer.alloc(32, 9).toString("base64"),

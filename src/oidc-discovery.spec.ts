@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  assertSafePublicHostname,
   discoverOidcConfiguration,
+  isNonPublicIp,
   requirePublicHttpsUrl,
   testOidcConnection,
+  testSamlConfiguration,
   type FederationFetch,
 } from "./oidc-discovery";
 
@@ -85,3 +88,106 @@ describe("OIDC discovery trust boundary", () => {
     await expect(testOidcConnection(issuer, fetchImpl)).rejects.toThrow(/no compatible signing key/);
   });
 });
+
+describe("SAML configuration preflight", () => {
+  const validCert = `-----BEGIN CERTIFICATE-----
+MIIDLTCCAhWgAwIBAgIQROnKm3pfgIdJRQugR1HBbTANBgkqhkiG9w0BAQsFADAb
+MRkwFwYDVQQDDBBpZHAuZXhhbXBsZS50ZXN0MB4XDTI2MDkwMzAyNDUzNVoXDTI3
+MDkwMzAzMDUzNVowGzEZMBcGA1UEAwwQaWRwLmV4YW1wbGUudGVzdDCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAOlW7lDKceAX4ZYub9rCmzWGHwQ1g5QA
+HY7iVRsD2lDtp4Mb+I3HwNpVTNw3FSYlNR2KZxQFbWjWsjlEDC8PHt/8d2YqCApt
++0zqJ9hBLoLiWUUxExXWFLcIa1rnHIyMNHy7dFO1Bpzkaj/I+0crbgIJU21jw+Pe
+pBFg1EUmEAxpWyRz3iug+jBDj2xVQL8VU1mXEnj1HheATrzKytAZOF/w+XORBpz5
+4+LsI+IuuuFqFYJjR2sA1uyY7iF1hIm9KqcNF6+Xqt5yDv89+eY7g53AcO3ZVp3+
+fxtKX5hdL5OKU3X1M5Wt+Dwa3++5T/VfJmaScjcMluEV08oPW/sIwk0CAwEAAaNt
+MGswDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcD
+ATAbBgNVHREEFDASghBpZHAuZXhhbXBsZS50ZXN0MB0GA1UdDgQWBBQIHhW25wVo
+IpEZmRTGLHltlilhvzANBgkqhkiG9w0BAQsFAAOCAQEAv6ZJaJS4d3k6tsQ2K5TR
+3+GTpD+766uRaEqEBeW6lT1GnNde+PDk5GGWfmw070/PKxQwytx8JFmi69qtSzLQ
+oSRNkBOWjPTwEoxvrj9ZIpf9y3jGkoKH3A3pNcVkU8Whs5YNoUqg+ubjASI2amT6
+N4uaOsWvIj3lByAVBmgHjDFhah7Y9Kjw3OOmnUxkufW9CmB6l0pmLpo36aDLU3xw
+7cgDFrzk3PNIz7BEfwS9H/ZC9qGly/G50aP69pzmPC9Ewxnw15sH/+GcBVad9F5w
+glWNiYE/RdpeIY4NLgCdai76DRZndOdZ6azbsvVNoeaMwM6dd8zyknyLmVrH0W0B
+og==
+-----END CERTIFICATE-----`;
+
+  it("validates a public HTTPS SAML entry point and active X.509 certificate", () => {
+    const evidence = testSamlConfiguration({
+      samlEntryPoint: "https://idp.example.test/sso/saml",
+      samlCert: validCert,
+      samlIssuer: "unierp-test-tenant",
+    });
+
+    expect(evidence.entryPoint).toBe("https://idp.example.test/sso/saml");
+    expect(evidence.issuer).toBe("unierp-test-tenant");
+    expect(evidence.certificateSubject).toContain("idp.example.test");
+    expect(evidence.keyAlgorithm).toBe("rsa");
+    expect(evidence.fingerprint256).toBeDefined();
+  });
+
+  it("rejects insecure or non-public SAML entry points", () => {
+    expect(() =>
+      testSamlConfiguration({
+        samlEntryPoint: "http://idp.example.test/sso",
+        samlCert: validCert,
+      }),
+    ).toThrow(/public HTTPS URL/);
+
+    expect(() =>
+      testSamlConfiguration({
+        samlEntryPoint: "https://127.0.0.1/sso",
+        samlCert: validCert,
+      }),
+    ).toThrow(/public HTTPS URL/);
+
+    expect(() =>
+      testSamlConfiguration({
+        samlEntryPoint: "https://169.254.169.254/sso",
+        samlCert: validCert,
+      }),
+    ).toThrow(/public HTTPS URL/);
+  });
+
+  it("rejects malformed or empty certificates", () => {
+    expect(() =>
+      testSamlConfiguration({
+        samlEntryPoint: "https://idp.example.test/sso/saml",
+        samlCert: "",
+      }),
+    ).toThrow(/certificate is required/);
+
+    expect(() =>
+      testSamlConfiguration({
+        samlEntryPoint: "https://idp.example.test/sso/saml",
+        samlCert: "not-a-valid-pem",
+      }),
+    ).toThrow(/invalid PEM/);
+  });
+});
+
+describe("DNS rebinding and egress IP defense", () => {
+  it("denies private and reserved IP literals immediately", async () => {
+    await expect(assertSafePublicHostname("127.0.0.1")).rejects.toThrow(/private or non-public IP/);
+    await expect(assertSafePublicHostname("10.0.0.1")).rejects.toThrow(/private or non-public IP/);
+    await expect(assertSafePublicHostname("192.168.1.1")).rejects.toThrow(/private or non-public IP/);
+    await expect(assertSafePublicHostname("169.254.169.254")).rejects.toThrow(/private or non-public IP/);
+    await expect(assertSafePublicHostname("::1")).rejects.toThrow(/private or non-public IP/);
+  });
+
+  it("denies hostnames resolving to restricted addresses via DNS lookup", async () => {
+    const fakeLookup = vi.fn().mockResolvedValue([
+      { address: "169.254.169.254", family: 4 },
+    ]);
+    await expect(assertSafePublicHostname("metadata.evil.com", fakeLookup)).rejects.toThrow(
+      /resolves to private\/restricted IP/,
+    );
+  });
+
+  it("accepts hostnames resolving exclusively to public IP addresses", async () => {
+    const fakeLookup = vi.fn().mockResolvedValue([
+      { address: "93.184.216.34", family: 4 },
+    ]);
+    await expect(assertSafePublicHostname("example.com", fakeLookup)).resolves.toBeUndefined();
+  });
+});
+

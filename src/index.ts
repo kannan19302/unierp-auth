@@ -236,14 +236,18 @@ export {
 } from "./configuration-secret.js";
 export {
   OIDC_ALLOWED_SIGNING_ALGORITHMS,
+  assertSafePublicHostname,
   discoverOidcConfiguration,
+  isNonPublicIp,
   requirePublicHttpsUrl,
   testOidcConnection,
+  testSamlConfiguration,
 } from "./oidc-discovery.js";
 export type {
   FederationFetch,
   OidcConnectionEvidence,
   OidcDiscoveryDocument,
+  SamlConnectionEvidence,
 } from "./oidc-discovery.js";
 
 /**
